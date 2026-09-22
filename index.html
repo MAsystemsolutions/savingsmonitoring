@@ -166,6 +166,10 @@
         </select>
       </div>
       <div class="field">
+        <label>Upload Screenshot / Receipt</label>
+        <input type="file" id="payReceiptFile" accept="image/*,.pdf">
+      </div>
+      <div class="field">
         <label>Notes</label>
         <textarea id="payNotes" rows="2"></textarea>
       </div>
@@ -309,6 +313,9 @@
 
   async function submitBillPayment(e) {
     e.preventDefault();
+    const fileInput = document.getElementById('payReceiptFile');
+    const file = fileInput.files[0];
+
     const payload = {
       billId: document.getElementById('payBillId').value,
       billName: document.getElementById('payBillNameInput').value,
@@ -319,9 +326,20 @@
       notes: document.getElementById('payNotes').value
     };
 
-    await apiCall('saveBillPayment', payload);
-    closeModal('payModal');
-    loadDashboard();
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        payload.receipt = { base64: evt.target.result, mimeType: file.type };
+        await apiCall('saveBillPayment', payload);
+        closeModal('payModal');
+        loadDashboard();
+      };
+      reader.readAsDataURL(file);
+    } else {
+      await apiCall('saveBillPayment', payload);
+      closeModal('payModal');
+      loadDashboard();
+    }
   }
 
   function openIncomeModal() {
