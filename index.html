@@ -12,7 +12,7 @@
       --ink: #181818;
       --muted: #66645e;
       --line: rgba(0,0,0,.12);
-      --paper: #dedcd6; /* Richer, distinct elegant warm gray background */
+      --paper: #dedcd6; /* Elegant warm gray background */
       --white: #ffffff;
       --danger: #9e3030;
       --warning: #946c12;
@@ -144,8 +144,8 @@
   <div class="modal-card">
     <h3 style="margin-top:0; font-family:'Playfair Display'; font-size:24px;">Pay Bill: <span id="payBillName"></span></h3>
     <form onsubmit="submitBillPayment(event)">
-      <input type="hidden" id="payBillInstanceId">
-      <input type="hidden" id="payBillDefaultName">
+      <input type="hidden" id="payBillId">
+      <input type="hidden" id="payBillNameInput">
       <input type="hidden" id="payBillExpected">
       
       <div class="field">
@@ -164,10 +164,6 @@
           <option>Cash</option>
           <option>Credit Card</option>
         </select>
-      </div>
-      <div class="field">
-        <label>Upload Receipt / Screenshot</label>
-        <input type="file" id="payReceiptFile" accept="image/*,.pdf">
       </div>
       <div class="field">
         <label>Notes</label>
@@ -199,7 +195,7 @@
 </div>
 
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbzS0_REB4tXKtRkRm4i0axwUH4yzbHemntri5pbZexAwQhhTBvqwO_kBi9iIZv_BKKUgQ/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbxkbN2qwWHzdK2iK2RYbZLNIrf-KoMquD2TFf-3vos834sufp_o7w3h2cnwf6NK7FO16Q/exec";
   let DASHBOARD = {};
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -254,7 +250,7 @@
     document.getElementById('billCountSummary').textContent = `${bills.filter(b => b.status === 'PAID').length}/${bills.length} Paid`;
 
     if (!bills.length) {
-      container.innerHTML = '<div style="color:var(--muted); font-size:12px;">No bills configured. Please make sure RecurringBills tab has data.</div>';
+      container.innerHTML = '<div style="color:var(--muted); font-size:12px;">No bills configured in RecurringBills tab.</div>';
       return;
     }
 
@@ -302,9 +298,9 @@
   }
 
   function openPayModal(id, name, expected) {
-    document.getElementById('payBillInstanceId').value = id;
+    document.getElementById('payBillId').value = id;
     document.getElementById('payBillName').textContent = name;
-    document.getElementById('payBillDefaultName').value = name;
+    document.getElementById('payBillNameInput').value = name;
     document.getElementById('payBillExpected').value = expected;
     document.getElementById('payActualAmount').value = expected;
     document.getElementById('payDate').value = new Date().toISOString().substring(0, 10);
@@ -313,12 +309,9 @@
 
   async function submitBillPayment(e) {
     e.preventDefault();
-    const fileInput = document.getElementById('payReceiptFile');
-    const file = fileInput.files[0];
-
     const payload = {
-      billInstanceId: document.getElementById('payBillInstanceId').value,
-      billName: document.getElementById('payBillDefaultName').value,
+      billId: document.getElementById('payBillId').value,
+      billName: document.getElementById('payBillNameInput').value,
       expectedAmount: document.getElementById('payBillExpected').value,
       actualAmount: document.getElementById('payActualAmount').value,
       paymentDate: document.getElementById('payDate').value,
@@ -326,20 +319,9 @@
       notes: document.getElementById('payNotes').value
     };
 
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async function(evt) {
-        payload.receipt = { base64: evt.target.result, mimeType: file.type };
-        await apiCall('saveBillPayment', payload);
-        closeModal('payModal');
-        loadDashboard();
-      };
-      reader.readAsDataURL(file);
-    } else {
-      await apiCall('saveBillPayment', payload);
-      closeModal('payModal');
-      loadDashboard();
-    }
+    await apiCall('saveBillPayment', payload);
+    closeModal('payModal');
+    loadDashboard();
   }
 
   function openIncomeModal() {
