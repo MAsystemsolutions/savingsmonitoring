@@ -64,7 +64,7 @@
     
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
     .modal.open { display: flex; }
-    .modal-card { width: 100%; max-width: 520px; background: var(--white); padding: 30px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+    .modal-card { width: 100%; max-width: 520px; background: var(--white); padding: 30px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
     .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
     .field label { font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: .1em; font-weight: 600; }
     .field input, .field select, .field textarea { width: 100%; border: 1px solid #d5d1c8; padding: 11px; border-radius: 8px; background: #faf9f5; outline: none; }
@@ -308,6 +308,7 @@
     document.getElementById('payBillExpected').value = expected;
     document.getElementById('payActualAmount').value = expected;
     document.getElementById('payDate').value = new Date().toISOString().substring(0, 10);
+    document.getElementById('payReceiptFile').value = ''; // Reset file input
     document.getElementById('payModal').classList.add('open');
   }
 
