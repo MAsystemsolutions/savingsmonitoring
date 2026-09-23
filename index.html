@@ -12,7 +12,7 @@
       --ink: #181818;
       --muted: #66645e;
       --line: rgba(0,0,0,.12);
-      --paper: #dedcd6; /* Elegant warm gray background */
+      --paper: #dedcd6;
       --white: #ffffff;
       --danger: #9e3030;
       --warning: #946c12;
@@ -55,7 +55,7 @@
     .badge { padding: 4px 10px; font-size: 10px; font-weight: 700; border-radius: 20px; text-transform: uppercase; letter-spacing: .05em; }
     .badge-unpaid { background: #e8e6e1; color: #555; }
     .badge-due { background: #fcf1dc; color: var(--warning); }
-    .badge-overdue, .badge-critical { background: #faeaea; color: var(--danger); }
+    .badge-overdue { background: #faeaea; color: var(--danger); }
     .badge-paid { background: #e3efe7; color: var(--success); }
 
     .btn { background: #181818; color: white; border: 0; padding: 9px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; }
@@ -70,7 +70,6 @@
     .field input, .field select, .field textarea { width: 100%; border: 1px solid #d5d1c8; padding: 11px; border-radius: 8px; background: #faf9f5; outline: none; }
     
     .health-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 12px; }
-    
     @media(max-width: 900px) { .panel { grid-column: span 12 !important; } }
   </style>
 </head>
@@ -80,8 +79,9 @@
   <nav class="nav">
     <div class="nav-inner">
       <div class="brand">Sun Fleet · Household Finances</div>
-      <div>
-        <button class="btn btn-outline" onclick="openIncomeModal()">Set Expected Salary</button>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-outline" onclick="openIncomeModal()">Manage Incomes</button>
+        <button class="btn" onclick="openExpenseModal()">+ Add Expense</button>
       </div>
     </div>
   </nav>
@@ -95,7 +95,7 @@
     <!-- STATS -->
     <section class="stats">
       <div class="stat">
-        <div class="stat-label">Expected Income</div>
+        <div class="stat-label">Total Expected Income</div>
         <div class="stat-value" id="expectedIncome">₱0</div>
       </div>
       <div class="stat">
@@ -127,7 +127,7 @@
         <div id="billsContainer">Loading bills...</div>
       </div>
 
-      <!-- SAVINGS & HEALTH CONTROLS -->
+      <!-- SAVINGS & GOALS -->
       <div class="panel span-4">
         <div class="panel-title">
           <h3>Savings & Goals</h3>
@@ -181,20 +181,64 @@
   </div>
 </div>
 
-<!-- INCOME MODAL -->
-<div class="modal" id="incomeModal">
+<!-- ADD EXPENSE MODAL -->
+<div class="modal" id="expenseModal">
   <div class="modal-card">
-    <h3 style="margin-top:0; font-family:'Playfair Display'; font-size:24px;">Set Expected Monthly Fund</h3>
-    <form onsubmit="submitExpectedIncome(event)">
+    <h3 style="margin-top:0; font-family:'Playfair Display'; font-size:24px;">Add Normal Expense</h3>
+    <form onsubmit="submitExpense(event)">
       <div class="field">
-        <label>Expected Income Amount (₱)</label>
-        <input type="number" step="0.01" id="expectedIncomeInput" required>
+        <label>Expense Description / Title</label>
+        <input type="text" id="expenseDesc" placeholder="e.g., Grocery run, Coffee" required>
+      </div>
+      <div class="field">
+        <label>Amount (₱)</label>
+        <input type="number" step="0.01" id="expenseAmount" required>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="expenseCategory">
+          <option>Groceries</option>
+          <option>Dining Out</option>
+          <option>Transportation</option>
+          <option>Shopping</option>
+          <option>Medical</option>
+          <option>General / Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="expenseDate" required>
+      </div>
+      <div class="field">
+        <label>Payment Method</label>
+        <select id="expenseMethod">
+          <option>GCash</option>
+          <option>Cash</option>
+          <option>Online Bank</option>
+          <option>Credit Card</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Notes</label>
+        <textarea id="expenseNotes" rows="2"></textarea>
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
-        <button type="button" class="btn btn-outline" onclick="closeModal('incomeModal')">Cancel</button>
-        <button type="submit" class="btn">Save Income</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('expenseModal')">Cancel</button>
+        <button type="submit" class="btn">Save Expense</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- MANAGE INCOMES MODAL -->
+<div class="modal" id="incomeModal">
+  <div class="modal-card">
+    <h3 style="margin-top:0; font-family:'Playfair Display'; font-size:24px;">Manage Monthly Incomes</h3>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:20px;">Set the expected monthly total for each income stream.</p>
+    <div id="incomeSourcesList">Loading...</div>
+    <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+      <button type="button" class="btn btn-outline" onclick="closeModal('incomeModal')">Close</button>
+    </div>
   </div>
 </div>
 
@@ -254,7 +298,7 @@
     document.getElementById('billCountSummary').textContent = `${bills.filter(b => b.status === 'PAID').length}/${bills.length} Paid`;
 
     if (!bills.length) {
-      container.innerHTML = '<div style="color:var(--muted); font-size:12px;">No bills configured in RecurringBills tab.</div>';
+      container.innerHTML = '<div style="color:var(--muted); font-size:12px;">No bills configured.</div>';
       return;
     }
 
@@ -262,11 +306,7 @@
       let isPaid = b.status === 'PAID';
       let isUrgent = b.status === 'OVERDUE' || b.status === 'DUE SOON';
       let rowClass = isPaid ? 'bill-row paid' : (isUrgent ? 'bill-row urgent' : 'bill-row');
-      
-      let badgeClass = 'badge badge-unpaid';
-      if (isPaid) badgeClass = 'badge badge-paid';
-      else if (b.status === 'OVERDUE') badgeClass = 'badge badge-overdue';
-      else if (b.status === 'DUE SOON') badgeClass = 'badge badge-due';
+      let badgeClass = isPaid ? 'badge badge-paid' : (b.status === 'OVERDUE' ? 'badge badge-overdue' : 'badge badge-unpaid');
 
       return `
         <div class="${rowClass}">
@@ -308,7 +348,6 @@
     document.getElementById('payBillExpected').value = expected;
     document.getElementById('payActualAmount').value = expected;
     document.getElementById('payDate').value = new Date().toISOString().substring(0, 10);
-    document.getElementById('payReceiptFile').value = '';
     document.getElementById('payModal').classList.add('open');
   }
 
@@ -316,7 +355,6 @@
     e.preventDefault();
     const fileInput = document.getElementById('payReceiptFile');
     const file = fileInput.files[0];
-
     const payload = {
       billId: document.getElementById('payBillId').value,
       billName: document.getElementById('payBillNameInput').value,
@@ -343,15 +381,48 @@
     }
   }
 
+  function openExpenseModal() {
+    document.getElementById('expenseDate').value = new Date().toISOString().substring(0, 10);
+    document.getElementById('expenseModal').classList.add('open');
+  }
+
+  async function submitExpense(e) {
+    e.preventDefault();
+    const payload = {
+      description: document.getElementById('expenseDesc').value,
+      amount: document.getElementById('expenseAmount').value,
+      category: document.getElementById('expenseCategory').value,
+      date: document.getElementById('expenseDate').value,
+      paymentMethod: document.getElementById('expenseMethod').value,
+      notes: document.getElementById('expenseNotes').value
+    };
+    await apiCall('saveExpense', payload);
+    closeModal('expenseModal');
+    loadDashboard();
+  }
+
   function openIncomeModal() {
+    const listContainer = document.getElementById('incomeSourcesList');
+    const sources = DASHBOARD.incomeSources || [];
+    listContainer.innerHTML = sources.map(inc => `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid var(--line);">
+        <div>
+          <div style="font-weight:600; font-size:14px;">${escapeHtml(inc.Income_Source_Name)}</div>
+          <div style="font-size:11px; color:var(--muted);">${escapeHtml(inc.Frequency)} · ${escapeHtml(inc.Schedule_Note || '')}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="number" id="inc_amt_${inc.Income_Source_ID}" value="${inc.Expected_Amount || 0}" style="width:100px; padding:6px; border:1px solid #d5d1c8; border-radius:6px; text-right;">
+          <button class="btn" onclick="saveIncomeStream('${inc.Income_Source_ID}')">Save</button>
+        </div>
+      </div>
+    `).join('');
     document.getElementById('incomeModal').classList.add('open');
   }
 
-  async function submitExpectedIncome(e) {
-    e.preventDefault();
-    const val = document.getElementById('expectedIncomeInput').value;
-    await apiCall('updateExpectedIncome', { amount: val });
-    closeModal('incomeModal');
+  async function saveIncomeStream(id) {
+    const val = document.getElementById(`inc_amt_${id}`).value;
+    await apiCall('saveIncomeSource', { incomeSourceId: id, amount: val });
+    alert('Income updated!');
     loadDashboard();
   }
 
